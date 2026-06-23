@@ -27,7 +27,8 @@ fn print_help_text(backup_directory: &PathBuf)
     Backupr:\n
     -p\t\tPath to folder to place backed up files. Defaults to (OS Home Dir)/backups. or in your case, ({})\n\n
     -t\t\tTime in (seconds/hours/days/months/years) between file modification to backup.\tExample: 24d for 24 days. 24h for 24 hours. 1m for 1 month. 120s for 2 minutes.\n\n
-    -ext and -ext-neg\t\tAllows you to only backup a certain file extension, or ignore a certain file extension in your backups.\tMay allow for you to run multiple of this program with different parameters, e.g ignoring .mp4, and running another process of backupr to only capture mp4s, and set a time of 3 days since modification.", &backup_directory.to_string_lossy());
+    -ext and -ext-neg\t\tAllows you to only backup a certain file extension, or ignore a certain file extension in your backups.\tMay allow for you to run multiple of this program with different parameters, e.g ignoring .mp4, and running another process of backupr to only capture mp4s, and set a time of 3 days since modification.\n
+    (pass \"-no-extension\" into -ext args for files with no extension)", &backup_directory.to_string_lossy());
 }
 
 fn time_parse (user_input: &String, time_format: &str, seconds: i64) -> i64
@@ -50,7 +51,7 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
 
     if args.len() == 1
     {
-        println!("No arguments provided, assuming defaults.\nDirectory: {}", backup_directory.to_string_lossy());
+        println!("No arguments provided, assuming defaults. Use -help to see arguments.\nDirectory: {}", backup_directory.to_string_lossy());
     }
     else if arg2.is_some() && ((arg2.as_ref().unwrap().eq_ignore_ascii_case("-help") || arg2.as_ref().unwrap().eq_ignore_ascii_case("-h") || arg2.as_ref().unwrap().eq_ignore_ascii_case("help")))
     {
@@ -116,14 +117,14 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
             {
                 let next = args.get(i+1).expect("Could not get string after \"-ext\" argument. Did you enter one?");
 
-                extension.push(next.trim().to_string());
+                extension.push(next.trim().to_string().replace(".", ""));
 
             }
             else if arg.trim().eq("-ext-neg")
             {
                 let next = args.get(i+1).expect("Could not get string after \"-ext\" argument. Did you enter one?");
 
-                extension.push(next.trim().to_string());
+                extension.push(next.trim().to_string().replace(".", ""));
 
                 *ext_neg = true;
 
@@ -180,15 +181,22 @@ fn main()
             {
                 for ext in &extension
                 {
-                    if file_path
-                    .extension().unwrap().eq(OsStr::new(ext))
+                    if file_path.extension().is_some()
+                    {
+                        if file_path
+                        .extension().unwrap().eq(OsStr::new(ext))
+                        {
+                            if file_modified
+                            .elapsed().unwrap() < time_to_check 
+                            {
+                                move_to_backup(file.unwrap(), &backup_directory);
+                                break;
+                            }
+                        }
+                    }
+                    else if file_path.extension().is_none() && ext.eq_ignore_ascii_case("-no-extension")
                     {
                         if file_modified
-                        .elapsed().unwrap() > time_to_check
-                        {
-                            break;
-                        }
-                        else if file_modified
                         .elapsed().unwrap() < time_to_check 
                         {
                             move_to_backup(file.unwrap(), &backup_directory);
@@ -201,15 +209,23 @@ fn main()
             {
                 for ext in &extension
                 {
-                    if !file_path
-                    .extension().unwrap().eq(OsStr::new(ext))
+                    if file_path.extension().is_some()
+                    {
+                        if !file_path
+                        .extension().unwrap().eq(OsStr::new(ext))
+                        {
+                            if file_modified
+                            .elapsed().unwrap() < time_to_check 
+                            {
+                                move_to_backup(file.unwrap(), &backup_directory);
+                                break;
+                            }
+                        }
+                    }
+                    //checks if "-no-extension" is a value in the extension array for handling files with no extension.
+                    else if file_path.extension().is_none() && ext.eq_ignore_ascii_case("-no-extension")
                     {
                         if file_modified
-                        .elapsed().unwrap() > time_to_check
-                        {
-                            break;
-                        }
-                        else if file_modified
                         .elapsed().unwrap() < time_to_check 
                         {
                             move_to_backup(file.unwrap(), &backup_directory);
