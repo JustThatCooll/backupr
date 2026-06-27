@@ -27,6 +27,6 @@ Help Text:
         -custom-text allows you to add your own text to the path.
     All of the modifier arguments will take effect on the parameters after them, allowing for multiple uses of the seperator function to change between args.
 
-Inspiration for most of these features ws not backing up old .mca regions, and only the new ones, as chunk pregeneration is pretty large. Though can be used for just about anything with the handy task scheduler.
+Inspiration for most of these features was not backing up old .mca regions, and only the new ones, as chunk pregeneration is pretty large. Though can be used for just about anything with the handy task scheduler.
 
 Should have everything you need and nothing you don't.
