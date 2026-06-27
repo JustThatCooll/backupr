@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+time = { version = "0.3.51", features = ["formatting", "local-offset", "parsing"] }
 walkdir = "2.5.0"
