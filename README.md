@@ -24,6 +24,7 @@ Help Text:
         -day -month and -year, will print day, month, and year in format numerical. (Unless your from beyond 10,000), then so on and so forth.
         -day-name and -month-name will print the name of the day, such as  Tuesday  and  February .
         -time, -time-ms and -time-ns will place the current time in  00(seperator)00  and  00(seperator)00(seperator)00  format respectively.
+        -custom-text allows you to add your own text to the path.
     All of the modifier arguments will take effect on the parameters after them, allowing for multiple uses of the seperator function to change between args.
 
 Inspiration for most of these features ws not backing up old .mca regions, and only the new ones, as chunk pregeneration is pretty large. Though can be used for just about anything with the handy task scheduler.

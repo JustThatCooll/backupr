@@ -35,7 +35,7 @@ fn print_help_text(backup_directory: &PathBuf)
     Filename modifiers:
     Modifies file fully modularly, prebuilt date-time for US and EU timestamps, or make your own.
 
-    -zoneUTC -zoneLocal, -zone, -date, -dateUS, -dateEU, -day, -month, -year, -day-name, -month-name, -time, -time-ms -time-ns, -seperator -arg-seperator
+    -zoneUTC -zoneLocal, -zone, -date, -dateUS, -dateEU, -day, -month, -year, -day-name, -month-name, -time, -time-ms -time-ns, -seperator -arg-seperator -custom-text
     Modifiers:
         -zoneUTC uses Coordinated Universal Time for the timezone, -zoneLocal will use your local timezone, -zone will print your local timezone offset.
         -seperator will change what is used to seperate tokens in text, if time was 12 o'clock, would be 12(seperator)00 e.g 12:00, 12.00.
@@ -45,6 +45,7 @@ fn print_help_text(backup_directory: &PathBuf)
         -day -month and -year, will print day, month, and year in format numerical. (Unless your from beyond 10,000), then so on and so forth.
         -day-name and -month-name will print the name of the day, such as \"Tuesday\" and \"February\".
         -time, -time-ms and -time-ns will place the current time in \"00(seperator)00\" and \"00(seperator)00(seperator)00\" format respectively.
+        -custom-text allows you to add your own text to the path.
     All of the modifier arguments will take effect on the parameters after them, allowing for multiple uses of the seperator function to change between args.", &backup_directory.to_string_lossy());
 }
 
@@ -105,7 +106,7 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
 
     //I would like to figure out a way to make this only initialize once one of the time options is selected, but I think the performance loss is super minimal for now.
     let mut current_time = time::OffsetDateTime::now_utc();
-    let mut time_added = false;
+    let mut modifier_added = false;
     let mut arg_seperator = "-";
     let mut seperator = ".";
 
@@ -131,7 +132,7 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
             }
             else if arg_trim.eq("-bp")
             {
-                let next = args.get(i+1).expect("Could not get path after \"-bp\" argument. Did you enter one?");
+                let next: &String = args.get(i+1).expect("Could not get path after \"-bp\" argument. Did you enter one?");
 
                 if next.contains("\\")
                 {
@@ -146,14 +147,29 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
                     println!("Path does not seem to contain any \"/'s\" or \"\\\"'s. Is this path valid? Path: {}", next);
                 }
             }
+            else if arg_trim.eq("-custom-text")
+            {
+
+                let next: &String = args.get(i+1).expect("Could not get path after \"-custom-text\" argument. Did you enter one?");
+
+                if modifier_added == false
+                {         
+                    modifier_added = true;   
+                    *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), next)).unwrap();
+                }
+                else if modifier_added == true
+                {
+                    *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), next)).unwrap();
+                }
+            }
             else if arg_trim.eq("-date")
             {   
-                if time_added == false
+                if modifier_added == false
                 {         
-                    time_added = true;   
+                    modifier_added = true;   
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), current_time.date().to_string().replace(":", seperator))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.date().to_string().replace(":", seperator))).unwrap();
                 }
@@ -162,12 +178,12 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
             {   
                 let month_number = month_to_number(current_time);
 
-                if time_added == false
+                if modifier_added == false
                 {             
-                    time_added = true;          
+                    modifier_added = true;          
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), format!("{}{seperator}{}{seperator}{}", month_number, current_time.day(), current_time.year()).replace(":", seperator))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), format!("{}{seperator}{}{seperator}{}", month_number, current_time.day(), current_time.year()).replace(":", seperator))).unwrap();
                 }
@@ -176,24 +192,24 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
             {
                 let month_number = month_to_number(current_time);
 
-                if time_added == false
+                if modifier_added == false
                 {             
-                    time_added = true;          
+                    modifier_added = true;          
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), format!("{}{seperator}{}{seperator}{}", current_time.day(), month_number , current_time.year()).replace(":", seperator))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), format!("{}{seperator}{}{seperator}{}", current_time.day(), month_number, current_time.year()).replace(":", seperator))).unwrap();
                 }
             }
             else if arg_trim.eq("-day-name")
             {                
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), format!("{}", current_time.weekday()))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.weekday())).unwrap();
@@ -201,12 +217,12 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
             }
             else if arg_trim.eq("-day")
             {                
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), format!("{}", current_time.day()))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.day())).unwrap();
                 }
@@ -219,13 +235,13 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
 
                 let month_number = month_to_number(current_time);
 
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), month_number)).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), month_number)).unwrap();
                 }
@@ -233,84 +249,84 @@ fn parse_args(backup_directory: &mut PathBuf, time_to_check: &mut Duration, exte
             
             else if arg_trim.eq("-month-name")
             {
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), format!("{}", current_time.month()))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.month())).unwrap();
                 }
             }
             else if arg_trim.eq("-year")
             {                
-                if time_added == false
+                if modifier_added == false
                 {              
-                    time_added = true;         
+                    modifier_added = true;         
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), format!("{}", current_time.year()))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.year())).unwrap();
                 }
             }
             else if arg_trim.eq("-time")
             {                
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), format!("{}{seperator}{}", current_time.time().hour().to_string(), current_time.time().minute()))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.time().to_string().replace(":", seperator))).unwrap();
                 }
             }
             else if arg_trim.eq("-time-ms")
             {                
-                if time_added == false
+                if modifier_added == false
                 {              
-                    time_added = true;         
+                    modifier_added = true;         
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), current_time.millisecond().to_string().replace(":", seperator).replace(".", seperator))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.millisecond().to_string().replace(":", seperator).replace(".", seperator))).unwrap();
                 }
             }
             else if arg_trim.eq("-time-ns")
             {                
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), current_time.nanosecond().to_string().replace(":", seperator).replace(".", seperator))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.nanosecond().to_string().replace(":", seperator).replace(".", seperator))).unwrap();
                 }
             }
             else if arg_trim.eq("-month")
             {                
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), current_time.month())).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.month())).unwrap();
                 }
             }
             else if arg_trim.eq("-zone")
             {                
-                if time_added == false
+                if modifier_added == false
                 {                
-                    time_added = true;       
+                    modifier_added = true;       
                     *backup_directory = PathBuf::from_str(&format!("{}/{}", backup_directory.to_str().unwrap().to_string(), current_time.offset().to_string().replace(":", seperator))).unwrap();
                 }
-                else if time_added == true
+                else if modifier_added == true
                 {
                     *backup_directory = PathBuf::from_str(&format!("{}{arg_seperator}{}", backup_directory.to_str().unwrap().to_string(), current_time.offset().to_string().replace(":", seperator))).unwrap();
                 }
@@ -402,7 +418,7 @@ fn main()
     
     
     parse_args(&mut backup_directory, &mut time_to_check, &mut extension, &mut ext_neg, &mut folder_path);
-    println!("{}", backup_directory.to_string_lossy());
+    println!("Backing up to: {}", backup_directory.to_string_lossy());
     //this is about my second time working with command line args, if you're one to read code, don't study this part!
     //any ideas on how to improve it are greatly welcome :D
 
@@ -489,5 +505,5 @@ fn main()
             }
         }
     }
-    println!("Backupr'd to {}", backup_directory.to_string_lossy());
+    println!("Backup done!");
 }
